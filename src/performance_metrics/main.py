@@ -12,26 +12,32 @@ from src.performance_metrics.portfolio_volatility import PortfolioVolatility
 logger = logging.getLogger(__name__)
 
 
+def get_dict_from_str(allocation_str: str) -> dict:
+    # Ensure allocation_str is a valid string before parsing
+    if isinstance(allocation_str, str):
+        allocation_str = allocation_str.strip('"')  # Remove surrounding double quotes
+        allocation_str = allocation_str.replace("np.int64", "")  # Remove `np.int64` if needed
+        allocation_dict = ast.literal_eval(allocation_str)
+    elif isinstance(allocation_str, dict):
+        allocation_dict = allocation_str  # Already a dictionary, no need to parse
+    else:
+        allocation_dict = {}  # Handle unexpected cases
+    return allocation_dict
+
+
 def calculate_performance(post_processing_df, data, start_date, end_date, current_dir):
     """Calculate and append performance_metrics metrics for portfolios based on allocation columns."""
-
     logger.info(f"started calculating calculate_performance for the month {current_dir}")
     performance_pkl_filepath = current_dir / PklFileConventions.performance_pkl_filename
     performance_df = load_data_from_pickle(performance_pkl_filepath)
-    # if performance_df is not None:
-    #     return performance_df
+    if performance_df is not None:
+        return performance_df
 
     for index, row in post_processing_df.iterrows():
         for col in post_processing_df.columns:
             if col.startswith('Allocation_') and '_remaining_amount' not in col:
                 try:
-                    # Safely convert string to dictionary
-                    allocation_str = row[col]  # Get the allocation dictionary
-                    # Replace NaN with None for safe evaluation
-                    allocation_str = allocation_str.replace("NaN", "None") if isinstance(allocation_str,
-                                                                                         str) else allocation_str
-                    allocation_dict = ast.literal_eval(allocation_str)
-
+                    allocation_dict = get_dict_from_str(row[col])
                     remaining_amount_col = col.replace('weight', 'remaining_amount')
                     remaining_amount = row[remaining_amount_col] if remaining_amount_col in row else 0
 
